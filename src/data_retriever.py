@@ -11,13 +11,13 @@ def get_hosts_info(content):
                     summary = host.summary
                     hosts_info.append({
                         'name': summary.config.name,
-                        'total_ram': hardware.memorySize / (1024 * 1024 * 1024),  # Chuyển từ byte sang GB
-                        'used_ram': summary.quickStats.overallMemoryUsage / 1024,  # Chuyển từ KB sang MB
-                        'free_ram': (hardware.memorySize - (summary.quickStats.overallMemoryUsage * 1024 * 1024)) / (1024 * 1024 * 1024),  # Chuyển từ byte sang GB
-                        'ram_usage_percent': (summary.quickStats.overallMemoryUsage / hardware.memorySize) * 100,
-                        'total_cpu': hardware.cpuInfo.numCpuCores * (hardware.cpuInfo.hz / 1000000000),  # Chuyển từ Hz sang GHz
-                        'used_cpu': summary.quickStats.overallCpuUsage / (1024 * 1024 * 1024),  # Chuyển từ Hz sang GHz
-                        'cpu_usage_percent': (summary.quickStats.overallCpuUsage / (hardware.cpuInfo.numCpuCores * hardware.cpuInfo.hz / 1000000)) * 100
+                        'total_ram': round(hardware.memorySize / (1024 * 1024 * 1024), 2),  # Chuyển từ byte sang GB và làm tròn đến số thập phân thứ 2
+                        'used_ram': round(summary.quickStats.overallMemoryUsage / 1024, 2),  # Chuyển từ KB sang MB và làm tròn đến số thập phân thứ 2
+                        'free_ram': round((hardware.memorySize - (summary.quickStats.overallMemoryUsage * 1024 * 1024)) / (1024 * 1024 * 1024), 2),  # Chuyển từ byte sang GB và làm tròn đến số thập phân thứ 2
+                        'ram_usage_percent': round((summary.quickStats.overallMemoryUsage / hardware.memorySize) * 100, 2),  # Làm tròn đến số thập phân thứ 2
+                        'total_cpu': round(hardware.cpuInfo.numCpuCores * (hardware.cpuInfo.hz / 1000000000), 2),  # Chuyển từ Hz sang GHz và làm tròn đến số thập phân thứ 2
+                        'used_cpu': round(summary.quickStats.overallCpuUsage / (1024 * 1024 * 1024), 2),  # Chuyển từ Hz sang GHz và làm tròn đến số thập phân thứ 2
+                        'cpu_usage_percent': round((summary.quickStats.overallCpuUsage / (hardware.cpuInfo.numCpuCores * hardware.cpuInfo.hz / 1000000)) * 100, 2)  # Làm tròn đến số thập phân thứ 2
                     })
         logger.info("Successfully retrieved host information")
     except Exception as e:
@@ -35,10 +35,10 @@ def get_storage_info(content):
                     if summary.type == "VMFS":
                         storage_info.append({
                             'name': summary.name,
-                            'total_capacity': summary.capacity / (1024 * 1024 * 1024 * 1024),  # Chuyển từ byte sang TB
-                            'used_capacity': (summary.capacity - summary.freeSpace) / (1024 * 1024 * 1024 * 1024),  # Chuyển từ byte sang TB
-                            'free_capacity': summary.freeSpace / (1024 * 1024 * 1024 * 1024),  # Chuyển từ byte sang TB
-                            'usage_percent': ((summary.capacity - summary.freeSpace) / summary.capacity) * 100
+                            'total_capacity': round(summary.capacity / (1024 * 1024 * 1024 * 1024), 2),  # Chuyển từ byte sang TB và làm tròn đến số thập phân thứ 2
+                            'used_capacity': round((summary.capacity - summary.freeSpace) / (1024 * 1024 * 1024 * 1024), 2),  # Chuyển từ byte sang TB và làm tròn đến số thập phân thứ 2
+                            'free_capacity': round(summary.freeSpace / (1024 * 1024 * 1024 * 1024), 2),  # Chuyển từ byte sang TB và làm tròn đến số thập phân thứ 2
+                            'usage_percent': round(((summary.capacity - summary.freeSpace) / summary.capacity) * 100, 2)  # Làm tròn đến số thập phân thứ 2
                         })
         logger.info("Successfully retrieved storage information")
     except Exception as e:
