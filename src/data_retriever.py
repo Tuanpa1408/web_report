@@ -1,69 +1,43 @@
-import mysql.connector
-from config.db_config import DB_CONFIG
-from datetime import datetime
+from pyVmomi import vim
+from src.logger import logger
 
-def store_data_mysql(hosts_info, storage_info):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
+def get_hosts_info(content):
+    hosts_info = []
+    try:
+        for datacenter in content.rootFolder.childEntity:
+            for computeResource in datacenter.hostFolder.childEntity:
+                for host in computeResource.host:
+                    hardware = host.hardware
+                    summary = host.summary
+                    hosts_info.append({
+                        'name': summary.config.name,
+                        'total_ram': hardware.memorySize,
+                        'used_ram': summary.quickStats.overallMemoryUsage * 1024 * 1024,
+                        'free_ram': hardware.memorySize - (summary.quickStats.overallMemoryUsage * 1024 * 1024),
+                        'ram_usage_percent': (summary.quickStats.overallMemoryUsage * 1024 * 1024) / hardware.memorySize * 100,
+                        'total_cpu': hardware.cpuInfo.numCpuCores,
+                        'used_cpu': summary.quickStats.overallCpuUsage,
+                        'cpu_usage_percent': summary.quickStats.overallCpuUsage / (hardware.cpuInfo.numCpuCores * hardware.cpuInfo.hz / 1000000) * 100
+                    })
+        logger.info("Successfully retrieved host information")
+    except Exception as e:
+        logger.error(f"Failed to retrieve host information: {e}")
+    return hosts_info
 
-    check_time = datetime.now()
-
-    # Bảng RAM
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS RAM (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            host_name VARCHAR(255),
-            total_ram BIGINT,
-            used_ram BIGINT,
-            free_ram BIGINT,
-            ram_usage_percent FLOAT,
-            check_time DATETIME
-        )
-    """)
-
-    for host in hosts_info:
-        cursor.execute("""
-            INSERT INTO RAM (host_name, total_ram, used_ram, free_ram, ram_usage_percent, check_time)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (host['name'], host['total_ram'], host['used_ram'], host['free_ram'], host['ram_usage_percent'], check_time))
-
-    # Bảng CPU
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS CPU (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            host_name VARCHAR(255),
-            total_cpu INT,
-            used_cpu INT,
-            cpu_usage_percent FLOAT,
-            check_time DATETIME
-        )
-    """)
-
-    for host in hosts_info:
-        cursor.execute("""
-            INSERT INTO CPU (host_name, total_cpu, used_cpu, cpu_usage_percent, check_time)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (host['name'], host['total_cpu'], host['used_cpu'], host['cpu_usage_percent'], check_time))
-
-    # Bảng Storage
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS Storage (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            datastore_name VARCHAR(255),
-            total_capacity BIGINT,
-            used_capacity BIGINT,
-            free_capacity BIGINT,
-            usage_percent FLOAT,
-            check_time DATETIME
-        )
-    """)
-
-    for storage in storage_info:
-        cursor.execute("""
-            INSERT INTO Storage (datastore_name, total_capacity, used_capacity, free_capacity, usage_percent, check_time)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (storage['name'], storage['total_capacity'], storage['used_capacity'], storage['free_capacity'], storage['usage_percent'], check_time))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
+def get_storage_info(content):
+    storage_info = []
+    try:
+        for datacenter in content.rootFolder.childEntity:
+            for datastore in datacenter.datastore:
+                summary = datastore.summary
+                storage_info.append({
+                    'name': summary.name,
+                    'total_capacity': summary.capacity,
+                    'used_capacity': summary.capacity - summary.freeSpace,
+                    'free_capacity': summary.freeSpace,
+                    'usage_percent': (summary.capacity - summary.freeSpace) / summary.capacity * 100
+                })
+        logger.info("Successfully retrieved storage information")
+    except Exception as e:
+        logger.error(f"Failed to retrieve storage information: {e}")
+    return storage_info
