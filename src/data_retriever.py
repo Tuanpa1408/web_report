@@ -11,13 +11,13 @@ def get_hosts_info(content):
                     summary = host.summary
                     hosts_info.append({
                         'name': summary.config.name,
-                        'total_ram': hardware.memorySize,
-                        'used_ram': summary.quickStats.overallMemoryUsage * 1024 * 1024,
-                        'free_ram': hardware.memorySize - (summary.quickStats.overallMemoryUsage * 1024 * 1024),
-                        'ram_usage_percent': (summary.quickStats.overallMemoryUsage * 1024 * 1024) / hardware.memorySize * 100,
-                        'total_cpu': hardware.cpuInfo.numCpuCores,
-                        'used_cpu': summary.quickStats.overallCpuUsage,
-                        'cpu_usage_percent': summary.quickStats.overallCpuUsage / (hardware.cpuInfo.numCpuCores * hardware.cpuInfo.hz / 1000000) * 100
+                        'total_ram': hardware.memorySize / (1024 * 1024 * 1024),  # Chuyển từ byte sang GB
+                        'used_ram': summary.quickStats.overallMemoryUsage / 1024,  # Chuyển từ KB sang MB
+                        'free_ram': (hardware.memorySize - (summary.quickStats.overallMemoryUsage * 1024 * 1024)) / (1024 * 1024 * 1024),  # Chuyển từ byte sang GB
+                        'ram_usage_percent': (summary.quickStats.overallMemoryUsage / hardware.memorySize) * 100,
+                        'total_cpu': hardware.cpuInfo.numCpuCores * (hardware.cpuInfo.hz / 1000000000),  # Chuyển từ Hz sang GHz
+                        'used_cpu': summary.quickStats.overallCpuUsage / (1024 * 1024 * 1024),  # Chuyển từ Hz sang GHz
+                        'cpu_usage_percent': (summary.quickStats.overallCpuUsage / (hardware.cpuInfo.numCpuCores * hardware.cpuInfo.hz / 1000000)) * 100
                     })
         logger.info("Successfully retrieved host information")
     except Exception as e:
@@ -29,14 +29,17 @@ def get_storage_info(content):
     try:
         for datacenter in content.rootFolder.childEntity:
             for datastore in datacenter.datastore:
-                summary = datastore.summary
-                storage_info.append({
-                    'name': summary.name,
-                    'total_capacity': summary.capacity,
-                    'used_capacity': summary.capacity - summary.freeSpace,
-                    'free_capacity': summary.freeSpace,
-                    'usage_percent': (summary.capacity - summary.freeSpace) / summary.capacity * 100
-                })
+                if isinstance(datastore.info.vmfs, vim.host.MountInfo):
+                    summary = datastore.summary
+                    # Chỉ lấy thông tin của các SAN storage
+                    if summary.type == "VMFS":
+                        storage_info.append({
+                            'name': summary.name,
+                            'total_capacity': summary.capacity / (1024 * 1024 * 1024 * 1024),  # Chuyển từ byte sang TB
+                            'used_capacity': (summary.capacity - summary.freeSpace) / (1024 * 1024 * 1024 * 1024),  # Chuyển từ byte sang TB
+                            'free_capacity': summary.freeSpace / (1024 * 1024 * 1024 * 1024),  # Chuyển từ byte sang TB
+                            'usage_percent': ((summary.capacity - summary.freeSpace) / summary.capacity) * 100
+                        })
         logger.info("Successfully retrieved storage information")
     except Exception as e:
         logger.error(f"Failed to retrieve storage information: {e}")
